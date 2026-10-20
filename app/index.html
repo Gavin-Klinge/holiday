@@ -261,7 +261,7 @@ let faceState = "calm", talkTimer = null;
 function setFace(s) {
   faceState = s; const st = STATES[s];
   wrap.dataset.state = s; $("status").textContent = st.label;
-  if (s !== "speaking") { clearInterval(talkTimer); talkTimer = null; mouth.setAttribute("d", MOUTHS[st.mouth]); }
+  if (s !== "speaking") { if (talkTimer !== -1) clearInterval(talkTimer); talkTimer = null; mouth.setAttribute("d", MOUTHS[st.mouth]); }
   browL.style.transform = `translateY(${st.bl}px)`; browR.style.transform = `translateY(${st.br}px)`;
   pupils.style.transform = `translate(${st.look[0]}px, ${st.look[1]}px)`;
   head.style.transform = `rotate(${st.tilt}deg)`;
@@ -297,10 +297,63 @@ if ("speechSynthesis" in window) {
 function renderVoiceToggle() { $("voiceToggle").setAttribute("aria-pressed", String(voiceOn)); }
 renderVoiceToggle();
 $("voiceToggle").onclick = () => { voiceOn = !voiceOn; store.set("voiceOn", voiceOn); renderVoiceToggle(); if (!voiceOn) stopSpeaking(); };
-function stopSpeaking() { if ("speechSynthesis" in window) speechSynthesis.cancel(); setFace("calm"); }
+/* Recorded voice (made on the PC): played through Web Audio so the mouth follows the sound. */
+let actx = null, currentSrc = null, mouthRaf = null;
+function audioCtx() {
+  if (!actx) { const C = window.AudioContext || window.webkitAudioContext; if (C) actx = new C(); }
+  if (actx && actx.state === "suspended") actx.resume();
+  return actx;
+}
+document.addEventListener("pointerdown", audioCtx, { passive: true });  // iOS only allows audio after a tap
+function hexToBytes(hex) {
+  const h = hex.startsWith("\\x") ? hex.slice(2) : hex;
+  const out = new Uint8Array(h.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(h.substr(i * 2, 2), 16);
+  return out;
+}
+async function fetchClip(column, id, tries = 3) {
+  for (let i = 0; i < tries; i++) {
+    const { data } = await sb.from("voice_clips").select("audio").eq(column, id)
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (data && data.audio) return hexToBytes(data.audio);
+    await new Promise(r => setTimeout(r, 1200));
+  }
+  return null;
+}
+async function playClip(bytes, after = "calm") {
+  const ctx = audioCtx(); if (!ctx) return false;
+  try {
+    const buf = await ctx.decodeAudioData(bytes.buffer.slice(0));
+    stopSpeaking(false);
+    const src = ctx.createBufferSource(), an = ctx.createAnalyser();
+    an.fftSize = 512; src.buffer = buf; src.connect(an); an.connect(ctx.destination);
+    const levels = new Uint8Array(an.fftSize);
+    setFace("speaking"); clearInterval(talkTimer); talkTimer = -1;
+    const tick = () => {
+      an.getByteTimeDomainData(levels);
+      let peak = 0; for (const v of levels) peak = Math.max(peak, Math.abs(v - 128));
+      mouth.setAttribute("d", MOUTHS[peak < 6 ? "smile" : peak < 22 ? "o1" : peak < 45 ? "o3" : "o2"]);
+      mouthRaf = requestAnimationFrame(tick);
+    };
+    tick();
+    src.onended = () => { if (currentSrc === src) { cancelAnimationFrame(mouthRaf); currentSrc = null; talkTimer = null; setFace(after); } };
+    currentSrc = src; src.start();
+    return true;
+  } catch { return false; }
+}
+async function sayRecorded(column, id, text) {
+  const bytes = await fetchClip(column, id, column === "message_id" ? 3 : 1);
+  if (!bytes || !(await playClip(bytes))) speak(text);
+}
+function stopSpeaking(reset = true) {
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  if (currentSrc) { try { currentSrc.onended = null; currentSrc.stop(); } catch {} currentSrc = null; }
+  cancelAnimationFrame(mouthRaf); if (talkTimer === -1) talkTimer = null;
+  if (reset) setFace("calm");
+}
 function speak(text, after = "calm") {
   if (!("speechSynthesis" in window)) return;
-  speechSynthesis.cancel();
+  stopSpeaking(false);
   // Split into sentences: iOS stops long utterances early.
   const parts = text.replace(/\s+/g, " ").match(/[^.!?]+[.!?]*\s*/g) || [text];
   parts.forEach((p, i) => {
@@ -352,14 +405,14 @@ function addMsg(m, { scroll = true } = {}) {
   const el = document.createElement("div");
   el.className = "msg " + (m.note ? "note" : m.direction === "in" ? "g" : "h");
   el.textContent = m.body;
-  if (m.direction === "out") el.onclick = () => speak(m.body);
+  if (m.direction === "out") el.onclick = () => sayRecorded("message_id", m.id, m.body);
   log.appendChild(el);
   if (scroll) log.scrollTop = log.scrollHeight;
   return el;
 }
 async function send() {
   const body = input.value.trim(); if (!body) return;
-  if ("speechSynthesis" in window) speechSynthesis.cancel();  // also unlocks audio on iOS (user gesture)
+  stopSpeaking(false); audioCtx();  // a tap: unlocks audio on iOS
   input.value = ""; autosize();
   const tmp = addMsg({ direction: "in", body });
   setFace("thinking");
@@ -374,7 +427,7 @@ async function send() {
 function onReply(m) {
   addMsg(m);
   if (m.related && m.related.reply_to === pendingId) { pendingId = null; clearTimeout(pendingTimer); }
-  if (voiceOn) speak(m.body); else setFace("calm");
+  if (voiceOn) sayRecorded("message_id", m.id, m.body); else setFace("calm");
 }
 
 async function loadHistory() {
@@ -384,18 +437,19 @@ async function loadHistory() {
   log.scrollTop = log.scrollHeight;
   if (!data || !data.length) addMsg({ note: true, body: "Say hi. Tap the mic to talk, or type." });
 }
+let currentBriefId = null;
 async function loadBrief() {
-  const { data } = await sb.from("briefs").select("brief_date,content_md").eq("kind", "morning")
+  const { data } = await sb.from("briefs").select("id,brief_date,content_md").eq("kind", "morning")
     .order("brief_date", { ascending: false }).limit(1).maybeSingle();
   if (!data) return;
   $("brief").hidden = false;
   const d = new Date(data.brief_date + "T12:00:00");
   const today = new Date(); const isToday = d.toDateString() === today.toDateString();
   $("briefTitle").textContent = isToday ? "This morning's brief" : "Brief from " + d.toLocaleDateString(undefined, { weekday: "long" });
-  $("briefText").textContent = data.content_md;
+  $("briefText").textContent = data.content_md; currentBriefId = data.id;
 }
 $("briefToggle").onclick = () => { const b = $("brief"); b.classList.toggle("open"); $("briefToggle").textContent = b.classList.contains("open") ? "Hide" : "Read"; };
-$("briefPlay").onclick = () => speak($("briefText").textContent);
+$("briefPlay").onclick = () => { audioCtx(); sayRecorded("brief_id", currentBriefId, $("briefText").textContent); };
 
 function subscribe() {
   sb.channel("holiday-live")
