@@ -336,7 +336,7 @@ async function playClip(bytes, after = "calm") {
       mouthRaf = requestAnimationFrame(tick);
     };
     tick();
-    src.onended = () => { if (currentSrc === src) { cancelAnimationFrame(mouthRaf); currentSrc = null; talkTimer = null; setFace(after); } };
+    src.onended = () => { if (currentSrc === src) { cancelAnimationFrame(mouthRaf); currentSrc = null; talkTimer = null; setFace(after); afterSpeech(); } };
     currentSrc = src; src.start();
     return true;
   } catch { return false; }
@@ -361,18 +361,26 @@ function speak(text, after = "calm") {
     if (chosenVoice) u.voice = chosenVoice;
     u.rate = 1.02; u.pitch = 1.05;
     if (i === 0) u.onstart = () => setFace("speaking");
-    if (i === parts.length - 1) { u.onend = () => setFace(after); u.onerror = () => setFace(after); }
+    if (i === parts.length - 1) { u.onend = () => { setFace(after); afterSpeech(); }; u.onerror = () => setFace(after); }
     speechSynthesis.speak(u);
   });
 }
 
 /* ---------------- voice in ---------------- */
+// Conversation: once Gavin talks with the mic, the mic reopens each time Holiday finishes
+// answering, until he goes quiet, taps the mic, or types.
 const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec = null, listening = false;
+let rec = null, listening = false, conversing = false;
 if (!Rec) $("mic").hidden = true;
+function afterSpeech() {
+  if (conversing && !listening) setTimeout(() => { if (conversing && !listening) listen(true); }, 350);
+}
 $("mic").onclick = () => {
   if (!Rec) return;
-  if (listening) { rec.stop(); return; }
+  if (listening) { conversing = false; rec.stop(); return; }
+  conversing = true; listen(false);
+};
+function listen(auto) {
   stopSpeaking();
   rec = new Rec(); rec.lang = "en-US"; rec.interimResults = true; rec.continuous = false;
   let finalText = "";
@@ -382,14 +390,16 @@ $("mic").onclick = () => {
     for (const r of e.results) (r.isFinal ? (finalText += r[0].transcript) : (interim += r[0].transcript));
     $("input").value = (finalText || interim).trim(); autosize();
   };
-  rec.onerror = () => {};
+  rec.onerror = e => {
+    if (auto && e.error === "not-allowed") addMsg({ note: true, body: "Your turn. Tap the mic to answer." });
+  };
   rec.onend = () => {
     listening = false; $("mic").classList.remove("on");
     if (faceState === "listening") setFace("calm");
-    if ($("input").value.trim()) send();
+    if ($("input").value.trim()) send(true); else conversing = false;  // silence ends the conversation
   };
-  rec.start();
-};
+  try { rec.start(); } catch { conversing = false; }
+}
 
 /* ---------------- chat ---------------- */
 const log = $("log"), input = $("input");
@@ -397,7 +407,7 @@ let pendingId = null, pendingTimer = null;
 function autosize() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 120) + "px"; }
 input.addEventListener("input", autosize);
 input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
-$("send").onclick = send;
+$("send").onclick = () => send();
 
 const seen = new Set();
 function addMsg(m, { scroll = true } = {}) {
@@ -410,8 +420,9 @@ function addMsg(m, { scroll = true } = {}) {
   if (scroll) log.scrollTop = log.scrollHeight;
   return el;
 }
-async function send() {
+async function send(spoken = false) {
   const body = input.value.trim(); if (!body) return;
+  if (!spoken) conversing = false;
   stopSpeaking(false); audioCtx();  // a tap: unlocks audio on iOS
   input.value = ""; autosize();
   const tmp = addMsg({ direction: "in", body });
@@ -427,7 +438,7 @@ async function send() {
 function onReply(m) {
   addMsg(m);
   if (m.related && m.related.reply_to === pendingId) { pendingId = null; clearTimeout(pendingTimer); }
-  if (voiceOn) sayRecorded("message_id", m.id, m.body); else setFace("calm");
+  if (voiceOn) sayRecorded("message_id", m.id, m.body); else { setFace("calm"); afterSpeech(); }
 }
 
 async function loadHistory() {
