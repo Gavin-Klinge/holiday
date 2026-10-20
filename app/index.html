@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Holiday</title>
+<meta name="description" content="Gavin's chief of staff.">
+<meta name="theme-color" content="#f6efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1b1714" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Holiday">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root {
+  --bg: #f6efe7; --surface: #fffaf4; --surface-2: #efe5da; --text: #2a211b; --muted: #7a6a5e;
+  --accent: #b5523b; --accent-soft: #f1d6cc; --ring: #d9c6b6; --amber: #d69a2d; --me: #2f4b5c; --me-text: #f4f1ec;
+  --skin: #f0c4a2; --skin-shade: #e2ab86; --hair: #3b2419; --hair-hi: #5a3627; --iris: #4a2e20; --lip: #c0605a; --blush: #ec9e8c;
+  --frame: #6b3b28;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1b1714; --surface: #26201c; --surface-2: #322a24; --text: #f2e9e1; --muted: #b0a196;
+    --accent: #e0846c; --accent-soft: #4a2d24; --ring: #4a3e35; --me: #3d6378; --me-text: #f4f1ec;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1b1714; --surface: #26201c; --surface-2: #322a24; --text: #f2e9e1; --muted: #b0a196;
+  --accent: #e0846c; --accent-soft: #4a2d24; --ring: #4a3e35; --me: #3d6378; --me-text: #f4f1ec;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, textarea { font: inherit; color: inherit; }
+.app { display: flex; flex-direction: column; height: 100dvh; max-width: 560px; margin: 0 auto;
+  padding: env(safe-area-inset-top) 16px 0; }
+header { display: flex; align-items: center; justify-content: space-between; padding: 10px 0 0; }
+header h1 { font-size: 20px; font-weight: 650; margin: 0; letter-spacing: .2px; }
+.status { color: var(--muted); font-size: 14px; }
+.icon-btn { background: var(--surface-2); border: 0; border-radius: 999px; width: 40px; height: 40px;
+  display: grid; place-items: center; cursor: pointer; }
+.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn[aria-pressed="false"] { opacity: .55; }
+
+.stage { display: grid; place-items: center; padding: 6px 0 4px; }
+.face-wrap { position: relative; width: 168px; height: 168px; border-radius: 50%;
+  box-shadow: 0 0 0 4px var(--ring); transition: box-shadow .3s; }
+.face-wrap[data-state="listening"] { box-shadow: 0 0 0 4px var(--accent); animation: pulse 1.4s infinite; }
+.face-wrap[data-state="thinking"] { box-shadow: 0 0 0 4px var(--muted); }
+.face-wrap[data-state="speaking"] { box-shadow: 0 0 0 4px var(--accent); }
+.face-wrap[data-state="needs"] { box-shadow: 0 0 0 4px var(--amber); }
+@keyframes pulse { 50% { box-shadow: 0 0 0 9px var(--accent-soft); } }
+#face { width: 100%; height: 100%; border-radius: 50%; display: block; }
+#face .lids { transform-box: fill-box; transform-origin: center; transition: transform .07s; }
+#face.blink .lids { transform: scaleY(.08); }
+#face .pupil { transition: transform .35s ease; }
+#face .brow { transition: transform .3s ease; transform-box: fill-box; transform-origin: center; }
+#face .head { transition: transform .5s ease; transform-origin: 100px 150px; }
+.thinking-dots { position: absolute; right: -6px; top: 8px; display: none; gap: 4px;
+  background: var(--surface); padding: 6px 9px; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.face-wrap[data-state="thinking"] .thinking-dots { display: flex; }
+.thinking-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: dot 1s infinite; }
+.thinking-dots i:nth-child(2) { animation-delay: .15s; } .thinking-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes dot { 50% { opacity: .25; transform: translateY(-2px); } }
+
+.brief { background: var(--surface); border-radius: 16px; padding: 12px 14px; margin: 8px 0 6px; }
+.brief-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.brief-head b { font-size: 14px; color: var(--muted); font-weight: 600; }
+.brief-text { white-space: pre-wrap; margin-top: 0; max-height: 0; overflow: hidden; transition: max-height .3s; }
+.brief.open .brief-text { max-height: 60vh; overflow: auto; margin-top: 6px; }
+.pill { border: 0; background: var(--accent-soft); color: var(--accent); border-radius: 999px;
+  padding: 6px 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.pill.ghost { background: transparent; color: var(--muted); }
+
+.log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 8px 0 12px;
+  -webkit-overflow-scrolling: touch; }
+.msg { max-width: 84%; padding: 9px 13px; border-radius: 18px; white-space: pre-wrap; word-wrap: break-word; }
+.msg.h { align-self: flex-start; background: var(--surface); border-bottom-left-radius: 6px; }
+.msg.g { align-self: flex-end; background: var(--me); color: var(--me-text); border-bottom-right-radius: 6px; }
+.msg.note { align-self: center; background: none; color: var(--muted); font-size: 13px; padding: 2px; }
+.msg.h { cursor: pointer; }
+
+.composer { display: flex; gap: 8px; align-items: flex-end; padding: 8px 0 calc(10px + env(safe-area-inset-bottom)); }
+.composer textarea { flex: 1; resize: none; border: 1px solid var(--ring); background: var(--surface);
+  border-radius: 20px; padding: 9px 14px; max-height: 120px; outline: none; min-height: 42px; }
+.composer textarea:focus { border-color: var(--accent); }
+.round { width: 42px; height: 42px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer;
+  flex: none; }
+.round svg { width: 20px; height: 20px; }
+#mic { background: var(--surface-2); }
+#mic.on { background: var(--accent); color: #fff; }
+#send { background: var(--accent); color: #fff; }
+
+.signin { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 10px; padding-bottom: 20vh; }
+.signin p { color: var(--muted); margin: 0 0 6px; text-align: center; }
+.signin input { border: 1px solid var(--ring); background: var(--surface); border-radius: 12px; padding: 12px 14px; outline: none; }
+.signin input:focus { border-color: var(--accent); }
+.signin .row { display: flex; gap: 8px; }
+.signin .row button { flex: 1; }
+.btn { border: 0; border-radius: 12px; padding: 12px; font-weight: 600; cursor: pointer; background: var(--accent); color: #fff; }
+.btn.alt { background: var(--surface-2); color: var(--text); }
+.err { color: var(--accent); font-size: 14px; text-align: center; min-height: 20px; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Holiday</h1>
+      <div class="status" id="status">Here</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="icon-btn" id="voiceToggle" aria-pressed="true" aria-label="Read replies aloud" title="Read replies aloud">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      </button>
+      <button class="icon-btn" id="signOut" aria-label="Sign out" title="Sign out" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div class="face-wrap" id="faceWrap" data-state="calm">
+      <svg id="face" viewBox="0 0 200 200" aria-label="Holiday" role="img">
+        <defs>
+          <radialGradient id="bgg" cx="50%" cy="38%" r="70%">
+            <stop offset="0" stop-color="#f7dccb"/><stop offset="1" stop-color="#d9a98e"/>
+          </radialGradient>
+          <clipPath id="circle"><circle cx="100" cy="100" r="100"/></clipPath>
+        </defs>
+        <g clip-path="url(#circle)">
+          <rect width="200" height="200" fill="url(#bgg)"/>
+          <g class="head">
+            <!-- hair behind -->
+            <path fill="var(--hair)" d="M42 98c0-44 26-70 58-70s58 26 58 70c0 30-4 56-12 76H54c-8-20-12-46-12-76z"/>
+            <!-- shoulders -->
+            <path fill="#7b3f35" d="M30 200c4-26 30-38 70-38s66 12 70 38z"/>
+            <path fill="#f3ece4" d="M86 162h28l-14 22z"/>
+            <!-- neck -->
+            <path fill="var(--skin-shade)" d="M86 138h28v28c-8 6-20 6-28 0z"/>
+            <!-- ears + earrings -->
+            <ellipse cx="57" cy="104" rx="7" ry="11" fill="var(--skin-shade)"/>
+            <ellipse cx="143" cy="104" rx="7" ry="11" fill="var(--skin-shade)"/>
+            <circle cx="57" cy="118" r="3" fill="#e2b553"/><circle cx="143" cy="118" r="3" fill="#e2b553"/>
+            <!-- face -->
+            <path fill="var(--skin)" d="M60 96c0-30 18-50 40-50s40 20 40 50c0 30-16 52-40 52s-40-22-40-52z"/>
+            <!-- blush -->
+            <ellipse cx="76" cy="118" rx="9" ry="5" fill="var(--blush)" opacity=".45"/>
+            <ellipse cx="124" cy="118" rx="9" ry="5" fill="var(--blush)" opacity=".45"/>
+            <!-- brows -->
+            <path class="brow" id="browL" d="M72 86q10-6 20-1" stroke="var(--hair)" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+            <path class="brow" id="browR" d="M108 85q10-5 20 1" stroke="var(--hair)" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+            <!-- eyes -->
+            <g class="lids">
+              <ellipse cx="83" cy="101" rx="8" ry="6.2" fill="#fff"/>
+              <ellipse cx="117" cy="101" rx="8" ry="6.2" fill="#fff"/>
+              <g class="pupil" id="pupils">
+                <circle cx="83" cy="101.5" r="4.4" fill="var(--iris)"/><circle cx="117" cy="101.5" r="4.4" fill="var(--iris)"/>
+                <circle cx="84.5" cy="99.8" r="1.3" fill="#fff"/><circle cx="118.5" cy="99.8" r="1.3" fill="#fff"/>
+              </g>
+              <path d="M74 99q9-8 18 0" stroke="var(--hair)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+              <path d="M108 99q9-8 18 0" stroke="var(--hair)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            </g>
+            <!-- glasses -->
+            <g stroke="var(--frame)" stroke-width="1.8" fill="none" opacity=".9">
+              <rect x="70" y="91" width="26" height="20" rx="8"/>
+              <rect x="104" y="91" width="26" height="20" rx="8"/>
+              <path d="M96 99q4-3 8 0"/>
+            </g>
+            <!-- nose -->
+            <path d="M100 106q-3 9 1 12" stroke="var(--skin-shade)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <!-- mouth -->
+            <path id="mouth" fill="var(--lip)" d="M88 127q12 7 24 0q-12 4-24 0z"/>
+            <!-- hair front: side-swept fringe -->
+            <path fill="var(--hair)" d="M58 92c2-30 20-48 46-48 22 0 36 14 38 34-14-12-34-16-52-12-12 3-22 12-32 26z"/>
+            <path fill="var(--hair-hi)" opacity=".55" d="M78 56c10-6 24-8 36-4-12 0-24 4-34 12z"/>
+            <path fill="var(--hair)" d="M58 92c-4 20-2 44 6 66l-12 4c-6-24-6-50 6-70z"/>
+            <path fill="var(--hair)" d="M142 84c6 24 4 52-4 74l12 4c8-26 6-56-8-78z"/>
+          </g>
+        </g>
+      </svg>
+      <div class="thinking-dots"><i></i><i></i><i></i></div>
+    </div>
+  </div>
+
+  <section class="signin" id="signin" hidden>
+    <p>Sign in to talk to Holiday.</p>
+    <input id="email" type="email" autocomplete="username" placeholder="Email" value="gavinklinge@gmail.com">
+    <input id="password" type="password" autocomplete="current-password" placeholder="Password">
+    <div class="row">
+      <button class="btn" id="signinBtn">Sign in</button>
+      <button class="btn alt" id="signupBtn">First time</button>
+    </div>
+    <div class="err" id="authErr"></div>
+  </section>
+
+  <section id="main" hidden style="display:flex;flex-direction:column;flex:1;min-height:0">
+    <div class="brief" id="brief" hidden>
+      <div class="brief-head">
+        <b id="briefTitle">This morning's brief</b>
+        <div style="display:flex;gap:6px">
+          <button class="pill ghost" id="briefToggle">Read</button>
+          <button class="pill" id="briefPlay">Play</button>
+        </div>
+      </div>
+      <div class="brief-text" id="briefText"></div>
+    </div>
+    <div class="log" id="log" aria-live="polite"></div>
+    <div class="composer">
+      <button class="round" id="mic" aria-label="Talk" title="Talk">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+      </button>
+      <textarea id="input" rows="1" placeholder="Message Holiday"></textarea>
+      <button class="round" id="send" aria-label="Send" title="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+      </button>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = "https://xinajvscbkahvgmwdvpm.supabase.co";
+const SUPABASE_KEY = "sb_publishable_1jXjUBSw0DjczA0GB0dOAA_tWWjzoV2"; // public by design; data is protected by row-level security
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+/* ---------------- face ---------------- */
+const face = $("face"), wrap = $("faceWrap"), mouth = $("mouth"), pupils = $("pupils");
+const browL = $("browL"), browR = $("browR"), head = face.querySelector(".head");
+const MOUTHS = {
+  smile: "M88 127q12 7 24 0q-12 4-24 0z",
+  grin: "M86 125q14 11 28 0q-14 5-28 0z",
+  flat: "M91 128q9 2 18 0q-9 1-18 0z",
+  smirk: "M89 128q10 3 22-3q-10 6-22 3z",
+  o1: "M90 125q10-3 20 0q-1 7-10 7t-10-7z",
+  o2: "M91 124q9-4 18 0q0 11-9 11t-9-11z",
+  o3: "M89 125q11-3 22 0q-2 5-11 5t-11-5z",
+};
+const STATES = {
+  calm:      { mouth: "smile", bl: 0, br: 0, look: [0, 0], tilt: 0, label: "Here" },
+  listening: { mouth: "smile", bl: -3, br: -3, look: [0, 0], tilt: -3, label: "Listening…" },
+  thinking:  { mouth: "flat",  bl: 0, br: -4, look: [-2.5, -2.5], tilt: 2, label: "Thinking…" },
+  speaking:  { mouth: "o1",    bl: -1, br: -1, look: [0, 0], tilt: 0, label: "Talking" },
+  needs:     { mouth: "grin",  bl: -4, br: -4, look: [0, 0], tilt: 0, label: "Needs you" },
+  pushback:  { mouth: "smirk", bl: 0, br: -5, look: [1.5, 0], tilt: 4, label: "Hmm" },
+};
+let faceState = "calm", talkTimer = null;
+function setFace(s) {
+  faceState = s; const st = STATES[s];
+  wrap.dataset.state = s; $("status").textContent = st.label;
+  if (s !== "speaking") { clearInterval(talkTimer); talkTimer = null; mouth.setAttribute("d", MOUTHS[st.mouth]); }
+  browL.style.transform = `translateY(${st.bl}px)`; browR.style.transform = `translateY(${st.br}px)`;
+  pupils.style.transform = `translate(${st.look[0]}px, ${st.look[1]}px)`;
+  head.style.transform = `rotate(${st.tilt}deg)`;
+  if (s === "speaking" && !talkTimer) {
+    const shapes = ["o1", "o2", "o3", "smile", "o2", "o1", "flat"];
+    talkTimer = setInterval(() => mouth.setAttribute("d", MOUTHS[shapes[Math.floor(Math.random() * shapes.length)]]), 110);
+  }
+}
+(function blinkLoop() {
+  setTimeout(() => { face.classList.add("blink"); setTimeout(() => face.classList.remove("blink"), 130); blinkLoop(); },
+             2600 + Math.random() * 3200);
+})();
+setInterval(() => {  // small idle glances
+  if (faceState !== "calm") return;
+  const x = (Math.random() - .5) * 3, y = (Math.random() - .5) * 1.5;
+  pupils.style.transform = `translate(${x}px, ${y}px)`;
+  setTimeout(() => faceState === "calm" && (pupils.style.transform = "translate(0,0)"), 1200);
+}, 7000);
+
+/* ---------------- voice out ---------------- */
+let voiceOn = store.get("voiceOn", true), chosenVoice = null;
+function pickVoice() {
+  const vs = speechSynthesis.getVoices().filter(v => /^en(-|_)/i.test(v.lang));
+  const prefs = [/Ava.*(Premium|Enhanced)/i, /Zoe.*(Premium|Enhanced)/i, /Samantha.*(Premium|Enhanced)/i, /Allison.*(Premium|Enhanced)/i,
+                 /Google US English/i, /Microsoft (Aria|Jenny).*Online/i, /^Ava/i, /^Samantha/i, /Zoe/i, /female/i];
+  for (const p of prefs) { const v = vs.find(v => p.test(v.name)); if (v) return v; }
+  return vs.find(v => /en-US/i.test(v.lang)) || vs[0] || null;
+}
+if ("speechSynthesis" in window) {
+  chosenVoice = pickVoice();
+  speechSynthesis.onvoiceschanged = () => { chosenVoice = pickVoice(); };
+}
+function renderVoiceToggle() { $("voiceToggle").setAttribute("aria-pressed", String(voiceOn)); }
+renderVoiceToggle();
+$("voiceToggle").onclick = () => { voiceOn = !voiceOn; store.set("voiceOn", voiceOn); renderVoiceToggle(); if (!voiceOn) stopSpeaking(); };
+function stopSpeaking() { if ("speechSynthesis" in window) speechSynthesis.cancel(); setFace("calm"); }
+function speak(text, after = "calm") {
+  if (!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  // Split into sentences: iOS stops long utterances early.
+  const parts = text.replace(/\s+/g, " ").match(/[^.!?]+[.!?]*\s*/g) || [text];
+  parts.forEach((p, i) => {
+    const u = new SpeechSynthesisUtterance(p.trim());
+    if (chosenVoice) u.voice = chosenVoice;
+    u.rate = 1.02; u.pitch = 1.05;
+    if (i === 0) u.onstart = () => setFace("speaking");
+    if (i === parts.length - 1) { u.onend = () => setFace(after); u.onerror = () => setFace(after); }
+    speechSynthesis.speak(u);
+  });
+}
+
+/* ---------------- voice in ---------------- */
+const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false;
+if (!Rec) $("mic").hidden = true;
+$("mic").onclick = () => {
+  if (!Rec) return;
+  if (listening) { rec.stop(); return; }
+  stopSpeaking();
+  rec = new Rec(); rec.lang = "en-US"; rec.interimResults = true; rec.continuous = false;
+  let finalText = "";
+  rec.onstart = () => { listening = true; $("mic").classList.add("on"); setFace("listening"); };
+  rec.onresult = e => {
+    let interim = ""; finalText = "";
+    for (const r of e.results) (r.isFinal ? (finalText += r[0].transcript) : (interim += r[0].transcript));
+    $("input").value = (finalText || interim).trim(); autosize();
+  };
+  rec.onerror = () => {};
+  rec.onend = () => {
+    listening = false; $("mic").classList.remove("on");
+    if (faceState === "listening") setFace("calm");
+    if ($("input").value.trim()) send();
+  };
+  rec.start();
+};
+
+/* ---------------- chat ---------------- */
+const log = $("log"), input = $("input");
+let pendingId = null, pendingTimer = null;
+function autosize() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 120) + "px"; }
+input.addEventListener("input", autosize);
+input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
+$("send").onclick = send;
+
+const seen = new Set();
+function addMsg(m, { scroll = true } = {}) {
+  if (m.id && seen.has(m.id)) return; if (m.id) seen.add(m.id);
+  const el = document.createElement("div");
+  el.className = "msg " + (m.note ? "note" : m.direction === "in" ? "g" : "h");
+  el.textContent = m.body;
+  if (m.direction === "out") el.onclick = () => speak(m.body);
+  log.appendChild(el);
+  if (scroll) log.scrollTop = log.scrollHeight;
+  return el;
+}
+async function send() {
+  const body = input.value.trim(); if (!body) return;
+  if ("speechSynthesis" in window) speechSynthesis.cancel();  // also unlocks audio on iOS (user gesture)
+  input.value = ""; autosize();
+  const tmp = addMsg({ direction: "in", body });
+  setFace("thinking");
+  const { data, error } = await sb.from("messages").insert({ channel: "dashboard", direction: "in", body }).select().single();
+  if (error) { tmp.remove(); addMsg({ note: true, body: "That didn't send: " + error.message }); setFace("calm"); return; }
+  seen.add(data.id); pendingId = data.id;
+  clearTimeout(pendingTimer);
+  pendingTimer = setTimeout(() => {
+    if (pendingId === data.id) { addMsg({ note: true, body: "I'm not hearing back from Holiday's PC. Is it on?" }); setFace("calm"); }
+  }, 150000);
+}
+function onReply(m) {
+  addMsg(m);
+  if (m.related && m.related.reply_to === pendingId) { pendingId = null; clearTimeout(pendingTimer); }
+  if (voiceOn) speak(m.body); else setFace("calm");
+}
+
+async function loadHistory() {
+  const { data } = await sb.from("messages").select("id,direction,body,related,created_at")
+    .eq("channel", "dashboard").order("created_at", { ascending: false }).limit(40);
+  (data || []).reverse().forEach(m => addMsg(m, { scroll: false }));
+  log.scrollTop = log.scrollHeight;
+  if (!data || !data.length) addMsg({ note: true, body: "Say hi. Tap the mic to talk, or type." });
+}
+async function loadBrief() {
+  const { data } = await sb.from("briefs").select("brief_date,content_md").eq("kind", "morning")
+    .order("brief_date", { ascending: false }).limit(1).maybeSingle();
+  if (!data) return;
+  $("brief").hidden = false;
+  const d = new Date(data.brief_date + "T12:00:00");
+  const today = new Date(); const isToday = d.toDateString() === today.toDateString();
+  $("briefTitle").textContent = isToday ? "This morning's brief" : "Brief from " + d.toLocaleDateString(undefined, { weekday: "long" });
+  $("briefText").textContent = data.content_md;
+}
+$("briefToggle").onclick = () => { const b = $("brief"); b.classList.toggle("open"); $("briefToggle").textContent = b.classList.contains("open") ? "Hide" : "Read"; };
+$("briefPlay").onclick = () => speak($("briefText").textContent);
+
+function subscribe() {
+  sb.channel("holiday-live")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: "channel=eq.dashboard" },
+        p => { if (p.new.direction === "out") onReply(p.new); })
+    .on("postgres_changes", { event: "*", schema: "public", table: "briefs" }, loadBrief)
+    .subscribe();
+}
+
+/* ---------------- auth ---------------- */
+async function enter(session) {
+  $("signin").hidden = !!session; $("main").hidden = !session; $("signOut").hidden = !session;
+  if (!session) return;
+  const { data: owner } = await sb.rpc("is_owner");
+  if (!owner) {
+    $("main").hidden = true; $("signin").hidden = false;
+    $("authErr").textContent = "You're signed in. Holiday is waiting for Claude to make this account hers to answer.";
+    return;
+  }
+  await Promise.all([loadHistory(), loadBrief()]);
+  subscribe();
+}
+$("signinBtn").onclick = async () => {
+  $("authErr").textContent = "";
+  const { data, error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
+  if (error) { $("authErr").textContent = /confirm/i.test(error.message) ? "Account made. Tell Claude in the thread and I'll switch it on." : error.message; return; }
+  enter(data.session);
+};
+$("signupBtn").onclick = async () => {
+  $("authErr").textContent = "";
+  const pw = $("password").value;
+  if (pw.length < 10) { $("authErr").textContent = "Pick a password with at least 10 characters."; return; }
+  const { error } = await sb.auth.signUp({ email: $("email").value.trim(), password: pw });
+  $("authErr").textContent = error ? error.message : "Account made. Tell Claude in the thread and I'll switch it on, then sign in.";
+};
+$("signOut").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+sb.auth.getSession().then(({ data }) => enter(data.session));
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
