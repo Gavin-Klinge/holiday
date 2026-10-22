@@ -56,12 +56,16 @@ header h1 { font-size: 20px; font-weight: 650; margin: 0; letter-spacing: .2px; 
 .face-wrap[data-state="speaking"] { box-shadow: 0 0 0 4px var(--accent); }
 .face-wrap[data-state="needs"] { box-shadow: 0 0 0 4px var(--amber); }
 @keyframes pulse { 50% { box-shadow: 0 0 0 9px var(--accent-soft); } }
-#face { width: 100%; height: 100%; border-radius: 50%; display: block; }
-#face .lids { transform-box: fill-box; transform-origin: center; transition: transform .07s; }
-#face.blink .lids { transform: scaleY(.08); }
-#face .pupil { transition: transform .35s ease; }
-#face .brow { transition: transform .3s ease; transform-box: fill-box; transform-origin: center; }
-#face .head { transition: transform .5s ease; transform-origin: 100px 150px; }
+.portrait { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: var(--surface-2);
+  animation: breathe 5s ease-in-out infinite; }
+@keyframes breathe { 50% { transform: scale(1.012); } }
+.layers { position: absolute; inset: 0; transform-origin: 50% 70%;
+  transform: translateY(calc(var(--amp, 0) * -1.6px)) scale(calc(1 + var(--amp, 0) * .012)); }
+.layers img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0;
+  transition: opacity .7s ease; }
+.layers img.on { opacity: 1; }
+.face-wrap[data-state="listening"] .layers { transform: scale(1.025); transition: transform .6s ease; }
+@media (prefers-reduced-motion: reduce) { .portrait { animation: none; } .layers img { transition-duration: .2s; } }
 .thinking-dots { position: absolute; right: -6px; top: 8px; display: none; gap: 4px;
   background: var(--surface); padding: 6px 9px; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
 .face-wrap[data-state="thinking"] .thinking-dots { display: flex; }
@@ -128,64 +132,7 @@ header h1 { font-size: 20px; font-weight: 650; margin: 0; letter-spacing: .2px; 
 
   <div class="stage">
     <div class="face-wrap" id="faceWrap" data-state="calm">
-      <svg id="face" viewBox="0 0 200 200" aria-label="Holiday" role="img">
-        <defs>
-          <radialGradient id="bgg" cx="50%" cy="38%" r="70%">
-            <stop offset="0" stop-color="#f7dccb"/><stop offset="1" stop-color="#d9a98e"/>
-          </radialGradient>
-          <clipPath id="circle"><circle cx="100" cy="100" r="100"/></clipPath>
-        </defs>
-        <g clip-path="url(#circle)">
-          <rect width="200" height="200" fill="url(#bgg)"/>
-          <g class="head">
-            <!-- hair behind -->
-            <path fill="var(--hair)" d="M42 98c0-44 26-70 58-70s58 26 58 70c0 30-4 56-12 76H54c-8-20-12-46-12-76z"/>
-            <!-- shoulders -->
-            <path fill="#7b3f35" d="M30 200c4-26 30-38 70-38s66 12 70 38z"/>
-            <path fill="#f3ece4" d="M86 162h28l-14 22z"/>
-            <!-- neck -->
-            <path fill="var(--skin-shade)" d="M86 138h28v28c-8 6-20 6-28 0z"/>
-            <!-- ears + earrings -->
-            <ellipse cx="57" cy="104" rx="7" ry="11" fill="var(--skin-shade)"/>
-            <ellipse cx="143" cy="104" rx="7" ry="11" fill="var(--skin-shade)"/>
-            <circle cx="57" cy="118" r="3" fill="#e2b553"/><circle cx="143" cy="118" r="3" fill="#e2b553"/>
-            <!-- face -->
-            <path fill="var(--skin)" d="M60 96c0-30 18-50 40-50s40 20 40 50c0 30-16 52-40 52s-40-22-40-52z"/>
-            <!-- blush -->
-            <ellipse cx="76" cy="118" rx="9" ry="5" fill="var(--blush)" opacity=".45"/>
-            <ellipse cx="124" cy="118" rx="9" ry="5" fill="var(--blush)" opacity=".45"/>
-            <!-- brows -->
-            <path class="brow" id="browL" d="M72 86q10-6 20-1" stroke="var(--hair)" stroke-width="3.2" fill="none" stroke-linecap="round"/>
-            <path class="brow" id="browR" d="M108 85q10-5 20 1" stroke="var(--hair)" stroke-width="3.2" fill="none" stroke-linecap="round"/>
-            <!-- eyes -->
-            <g class="lids">
-              <ellipse cx="83" cy="101" rx="8" ry="6.2" fill="#fff"/>
-              <ellipse cx="117" cy="101" rx="8" ry="6.2" fill="#fff"/>
-              <g class="pupil" id="pupils">
-                <circle cx="83" cy="101.5" r="4.4" fill="var(--iris)"/><circle cx="117" cy="101.5" r="4.4" fill="var(--iris)"/>
-                <circle cx="84.5" cy="99.8" r="1.3" fill="#fff"/><circle cx="118.5" cy="99.8" r="1.3" fill="#fff"/>
-              </g>
-              <path d="M74 99q9-8 18 0" stroke="var(--hair)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-              <path d="M108 99q9-8 18 0" stroke="var(--hair)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-            </g>
-            <!-- glasses -->
-            <g stroke="var(--frame)" stroke-width="1.8" fill="none" opacity=".9">
-              <rect x="70" y="91" width="26" height="20" rx="8"/>
-              <rect x="104" y="91" width="26" height="20" rx="8"/>
-              <path d="M96 99q4-3 8 0"/>
-            </g>
-            <!-- nose -->
-            <path d="M100 106q-3 9 1 12" stroke="var(--skin-shade)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-            <!-- mouth -->
-            <path id="mouth" fill="var(--lip)" d="M88 127q12 7 24 0q-12 4-24 0z"/>
-            <!-- hair front: side-swept fringe -->
-            <path fill="var(--hair)" d="M58 92c2-30 20-48 46-48 22 0 36 14 38 34-14-12-34-16-52-12-12 3-22 12-32 26z"/>
-            <path fill="var(--hair-hi)" opacity=".55" d="M78 56c10-6 24-8 36-4-12 0-24 4-34 12z"/>
-            <path fill="var(--hair)" d="M58 92c-4 20-2 44 6 66l-12 4c-6-24-6-50 6-70z"/>
-            <path fill="var(--hair)" d="M142 84c6 24 4 52-4 74l12 4c8-26 6-56-8-78z"/>
-          </g>
-        </g>
-      </svg>
+      <div class="portrait" role="img" aria-label="Holiday"><div class="layers" id="portrait"></div></div>
       <div class="thinking-dots"><i></i><i></i><i></i></div>
     </div>
   </div>
@@ -238,49 +185,59 @@ const store = {
 };
 
 /* ---------------- face ---------------- */
-const face = $("face"), wrap = $("faceWrap"), mouth = $("mouth"), pupils = $("pupils");
-const browL = $("browL"), browR = $("browR"), head = face.querySelector(".head");
-const MOUTHS = {
-  smile: "M88 127q12 7 24 0q-12 4-24 0z",
-  grin: "M86 125q14 11 28 0q-14 5-28 0z",
-  flat: "M91 128q9 2 18 0q-9 1-18 0z",
-  smirk: "M89 128q10 3 22-3q-10 6-22 3z",
-  o1: "M90 125q10-3 20 0q-1 7-10 7t-10-7z",
-  o2: "M91 124q9-4 18 0q0 11-9 11t-9-11z",
-  o3: "M89 125q11-3 22 0q-2 5-11 5t-11-5z",
-};
+// Holiday's portrait: one photo per expression, stacked and crossfaded. The photos are
+// private (avatar_images, owner only), so they load after sign-in and are cached here.
+const wrap = $("faceWrap"), layers = $("portrait");
 const STATES = {
-  calm:      { mouth: "smile", bl: 0, br: 0, look: [0, 0], tilt: 0, label: "Here" },
-  listening: { mouth: "smile", bl: -3, br: -3, look: [0, 0], tilt: -3, label: "Listening…" },
-  thinking:  { mouth: "flat",  bl: 0, br: -4, look: [-2.5, -2.5], tilt: 2, label: "Thinking…" },
-  speaking:  { mouth: "o1",    bl: -1, br: -1, look: [0, 0], tilt: 0, label: "Talking" },
-  needs:     { mouth: "grin",  bl: -4, br: -4, look: [0, 0], tilt: 0, label: "Needs you" },
-  pushback:  { mouth: "smirk", bl: 0, br: -5, look: [1.5, 0], tilt: 4, label: "Hmm" },
+  calm:      { face: "neutral",   label: "Here" },
+  listening: { face: "neutral",   label: "Listening…" },
+  thinking:  { face: "thinking",  label: "Thinking…" },
+  speaking:  { face: null,        label: "Talking" },  // the reply's mood
+  needs:     { face: "concerned", label: "Needs you" },
+  pushback:  { face: "playful",   label: "Hmm" },
 };
-let faceState = "calm", talkTimer = null;
-function setFace(s) {
-  faceState = s; const st = STATES[s];
-  wrap.dataset.state = s; $("status").textContent = st.label;
-  if (s !== "speaking") { if (talkTimer !== -1) clearInterval(talkTimer); talkTimer = null; mouth.setAttribute("d", MOUTHS[st.mouth]); }
-  browL.style.transform = `translateY(${st.bl}px)`; browR.style.transform = `translateY(${st.br}px)`;
-  pupils.style.transform = `translate(${st.look[0]}px, ${st.look[1]}px)`;
-  head.style.transform = `rotate(${st.tilt}deg)`;
-  if (s === "speaking" && !talkTimer) {
-    const shapes = ["o1", "o2", "o3", "smile", "o2", "o1", "flat"];
-    talkTimer = setInterval(() => mouth.setAttribute("d", MOUTHS[shapes[Math.floor(Math.random() * shapes.length)]]), 110);
-  }
+// A laugh or a gasp is a moment, not a held pose: it settles into a smile mid-reply.
+const SETTLE = { laugh: "smile", surprised: "smile" };
+let faceState = "calm", mood = "smile", exprTimer = null;
+function showExpr(name) {
+  for (const img of layers.children) img.classList.toggle("on", img.dataset.name === name);
 }
-(function blinkLoop() {
-  setTimeout(() => { face.classList.add("blink"); setTimeout(() => face.classList.remove("blink"), 130); blinkLoop(); },
-             2600 + Math.random() * 3200);
-})();
-setInterval(() => {  // small idle glances
-  if (faceState !== "calm") return;
-  const x = (Math.random() - .5) * 3, y = (Math.random() - .5) * 1.5;
-  pupils.style.transform = `translate(${x}px, ${y}px)`;
-  setTimeout(() => faceState === "calm" && (pupils.style.transform = "translate(0,0)"), 1200);
-}, 7000);
-
+function setFace(s, m) {
+  const prev = faceState; if (m) mood = m;
+  faceState = s; wrap.dataset.state = s; $("status").textContent = STATES[s].label;
+  clearTimeout(exprTimer);
+  if (s === "speaking") {
+    showExpr(mood);
+    if (SETTLE[mood]) exprTimer = setTimeout(() => showExpr(SETTLE[mood]), 1800);
+  } else if (s === "calm" && prev === "speaking") {
+    showExpr(SETTLE[mood] || mood);  // the feeling lingers a moment after she finishes
+    exprTimer = setTimeout(() => showExpr("neutral"), 2500);
+  } else {
+    showExpr(STATES[s].face);
+  }
+  if (s !== "speaking") wrap.style.setProperty("--amp", 0);
+}
+function bytesToDataUrl(bytes, mime) {
+  let bin = ""; for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  return `data:${mime};base64,` + btoa(bin);
+}
+function renderFaces(urls) {
+  layers.replaceChildren(...Object.entries(urls).map(([name, url]) => {
+    const img = new Image(); img.src = url; img.alt = ""; img.dataset.name = name; return img;
+  }));
+  setFace(faceState);
+}
+async function loadFaces() {
+  const cached = store.get("faces", null);
+  if (cached) renderFaces(cached.urls);
+  const { data: meta } = await sb.from("avatar_images").select("name,updated_at");
+  if (!meta || !meta.length) return;
+  const stamp = meta.map(r => r.name + r.updated_at).sort().join();
+  if (cached && cached.stamp === stamp) return;
+  const { data } = await sb.from("avatar_images").select("name,mime,image");
+  const urls = {}; for (const r of data || []) urls[r.name] = bytesToDataUrl(hexToBytes(r.image), r.mime);
+  renderFaces(urls); store.set("faces", { stamp, urls });
+}
 /* ---------------- voice out ---------------- */
 let voiceOn = store.get("voiceOn", true), chosenVoice = null;
 function pickVoice() {
@@ -297,8 +254,8 @@ if ("speechSynthesis" in window) {
 function renderVoiceToggle() { $("voiceToggle").setAttribute("aria-pressed", String(voiceOn)); }
 renderVoiceToggle();
 $("voiceToggle").onclick = () => { voiceOn = !voiceOn; store.set("voiceOn", voiceOn); renderVoiceToggle(); if (!voiceOn) stopSpeaking(); };
-/* Recorded voice (made on the PC): played through Web Audio so the mouth follows the sound. */
-let actx = null, currentSrc = null, mouthRaf = null;
+/* Recorded voice (made on the PC): played through Web Audio so her face moves gently with the sound. */
+let actx = null, currentSrc = null, ampRaf = null;
 function audioCtx() {
   if (!actx) { const C = window.AudioContext || window.webkitAudioContext; if (C) actx = new C(); }
   if (actx && actx.state === "suspended") actx.resume();
@@ -320,7 +277,7 @@ async function fetchClip(column, id, tries = 3) {
   }
   return null;
 }
-async function playClip(bytes, after = "calm") {
+async function playClip(bytes, m, after = "calm") {
   const ctx = audioCtx(); if (!ctx) return false;
   try {
     const buf = await ctx.decodeAudioData(bytes.buffer.slice(0));
@@ -328,30 +285,32 @@ async function playClip(bytes, after = "calm") {
     const src = ctx.createBufferSource(), an = ctx.createAnalyser();
     an.fftSize = 512; src.buffer = buf; src.connect(an); an.connect(ctx.destination);
     const levels = new Uint8Array(an.fftSize);
-    setFace("speaking"); clearInterval(talkTimer); talkTimer = -1;
+    setFace("speaking", m);
+    let amp = 0;
     const tick = () => {
       an.getByteTimeDomainData(levels);
       let peak = 0; for (const v of levels) peak = Math.max(peak, Math.abs(v - 128));
-      mouth.setAttribute("d", MOUTHS[peak < 6 ? "smile" : peak < 22 ? "o1" : peak < 45 ? "o3" : "o2"]);
-      mouthRaf = requestAnimationFrame(tick);
+      amp = amp * .85 + Math.min(1, peak / 50) * .15;
+      wrap.style.setProperty("--amp", amp.toFixed(3));
+      ampRaf = requestAnimationFrame(tick);
     };
     tick();
-    src.onended = () => { if (currentSrc === src) { cancelAnimationFrame(mouthRaf); currentSrc = null; talkTimer = null; setFace(after); afterSpeech(); } };
+    src.onended = () => { if (currentSrc === src) { cancelAnimationFrame(ampRaf); currentSrc = null; setFace(after); afterSpeech(); } };
     currentSrc = src; src.start();
     return true;
   } catch { return false; }
 }
-async function sayRecorded(column, id, text) {
+async function sayRecorded(column, id, text, m = "smile") {
   const bytes = await fetchClip(column, id, column === "message_id" ? 3 : 1);
-  if (!bytes || !(await playClip(bytes))) speak(text);
+  if (!bytes || !(await playClip(bytes, m))) speak(text, m);
 }
 function stopSpeaking(reset = true) {
   if ("speechSynthesis" in window) speechSynthesis.cancel();
   if (currentSrc) { try { currentSrc.onended = null; currentSrc.stop(); } catch {} currentSrc = null; }
-  cancelAnimationFrame(mouthRaf); if (talkTimer === -1) talkTimer = null;
+  cancelAnimationFrame(ampRaf);
   if (reset) setFace("calm");
 }
-function speak(text, after = "calm") {
+function speak(text, m, after = "calm") {
   if (!("speechSynthesis" in window)) return;
   stopSpeaking(false);
   // Split into sentences: iOS stops long utterances early.
@@ -360,7 +319,7 @@ function speak(text, after = "calm") {
     const u = new SpeechSynthesisUtterance(p.trim());
     if (chosenVoice) u.voice = chosenVoice;
     u.rate = 1.02; u.pitch = 1.05;
-    if (i === 0) u.onstart = () => setFace("speaking");
+    if (i === 0) u.onstart = () => setFace("speaking", m);
     if (i === parts.length - 1) { u.onend = () => { setFace(after); afterSpeech(); }; u.onerror = () => setFace(after); }
     speechSynthesis.speak(u);
   });
@@ -415,7 +374,7 @@ function addMsg(m, { scroll = true } = {}) {
   const el = document.createElement("div");
   el.className = "msg " + (m.note ? "note" : m.direction === "in" ? "g" : "h");
   el.textContent = m.body;
-  if (m.direction === "out") el.onclick = () => sayRecorded("message_id", m.id, m.body);
+  if (m.direction === "out") el.onclick = () => sayRecorded("message_id", m.id, m.body, moodOf(m));
   log.appendChild(el);
   if (scroll) log.scrollTop = log.scrollHeight;
   return el;
@@ -435,10 +394,11 @@ async function send(spoken = false) {
     if (pendingId === data.id) { addMsg({ note: true, body: "I'm not hearing back from Holiday's PC. Is it on?" }); setFace("calm"); }
   }, 150000);
 }
+const moodOf = m => (m.related && m.related.mood) || "smile";
 function onReply(m) {
   addMsg(m);
   if (m.related && m.related.reply_to === pendingId) { pendingId = null; clearTimeout(pendingTimer); }
-  if (voiceOn) sayRecorded("message_id", m.id, m.body); else { setFace("calm"); afterSpeech(); }
+  if (voiceOn) sayRecorded("message_id", m.id, m.body, moodOf(m)); else { setFace("speaking", moodOf(m)); setFace("calm"); afterSpeech(); }
 }
 
 async function loadHistory() {
@@ -480,7 +440,7 @@ async function enter(session) {
     $("authErr").textContent = "You're signed in. Holiday is waiting for Claude to make this account hers to answer.";
     return;
   }
-  await Promise.all([loadHistory(), loadBrief()]);
+  await Promise.all([loadHistory(), loadBrief(), loadFaces()]);
   subscribe();
 }
 $("signinBtn").onclick = async () => {
