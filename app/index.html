@@ -376,6 +376,7 @@ function addMsg(m, { scroll = true } = {}) {
   el.textContent = m.body;
   if (m.direction === "out") el.onclick = () => sayRecorded("message_id", m.id, m.body, moodOf(m));
   log.appendChild(el);
+  if (window.HolidayApprovals) HolidayApprovals.attach(el, m);  // draft cards (approvals.js)
   if (scroll) log.scrollTop = log.scrollHeight;
   return el;
 }
@@ -461,5 +462,6 @@ sb.auth.getSession().then(({ data }) => enter(data.session));
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
+<script src="approvals.js"></script>
 </body>
 </html>
