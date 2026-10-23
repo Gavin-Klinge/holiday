@@ -382,6 +382,7 @@ function addMsg(m, { scroll = true } = {}) {
   if (m.direction === "out") el.onclick = () => sayRecorded("message_id", m.id, m.body, moodOf(m));
   log.appendChild(el);
   if (window.HolidayApprovals) HolidayApprovals.attach(el, m);  // draft cards (approvals.js)
+  if (window.HolidayReminders) HolidayReminders.attach(el, m);  // reminder cards (reminders.js)
   if (scroll) log.scrollTop = log.scrollHeight;
   return el;
 }
@@ -416,17 +417,13 @@ async function loadHistory() {
 }
 let currentBriefId = null;
 async function loadBrief() {
-  // The newest of the morning brief and the evening wrap.
-  const { data } = await sb.from("briefs").select("id,brief_date,kind,content_md").in("kind", ["morning", "evening"])
-    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const { data } = await sb.from("briefs").select("id,brief_date,content_md").eq("kind", "morning")
+    .order("brief_date", { ascending: false }).limit(1).maybeSingle();
   if (!data) return;
   $("brief").hidden = false;
   const d = new Date(data.brief_date + "T12:00:00");
   const today = new Date(); const isToday = d.toDateString() === today.toDateString();
-  const day = d.toLocaleDateString(undefined, { weekday: "long" });
-  $("briefTitle").textContent = data.kind === "evening"
-    ? (isToday ? "Tonight's wrap" : day + "'s wrap")
-    : (isToday ? "This morning's brief" : "Brief from " + day);
+  $("briefTitle").textContent = isToday ? "This morning's brief" : "Brief from " + d.toLocaleDateString(undefined, { weekday: "long" });
   $("briefText").textContent = data.content_md; currentBriefId = data.id;
   loadBriefVideo(data.id);
 }
@@ -500,5 +497,6 @@ sb.auth.getSession().then(({ data }) => enter(data.session));
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="approvals.js"></script>
+<script src="reminders.js"></script>
 </body>
 </html>
