@@ -4,6 +4,7 @@
    - Email: "Send from my mail" opens his own mail app with the draft filled in; he presses
      Send there. Holiday never sends mail.
    - Event: "Add it" approves it and Holiday's PC puts it on his calendar.
+   - PC action (type, click, read a file): "Do it" approves it and Holiday's PC does it.
    Uses `sb` and `log` from index.html. */
 (() => {
   const css = `
@@ -32,8 +33,11 @@
     email_executed: "Opened in your mail. Hit Send there.", event_executed: "On your calendar.",
     email_rejected: "Skipped.", event_rejected: "Skipped.",
     email_expired: "Replaced by a newer draft.", event_expired: "Replaced by a newer draft.",
+    pc_pending: "", pc_approved: "Doing it on your PC…", pc_executed: "Done on your PC.",
+    pc_rejected: "Skipped.", pc_expired: "Expired.",
   };
   const isEmail = a => a.kind === "email_new" || a.kind === "email_reply";
+  const isPC = a => a.kind === "pc_action";
 
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function addrOnly(to) { const m = /<([^>]+)>/.exec(to); return (m ? m[1] : to).trim(); }
@@ -75,10 +79,16 @@
   function render(a) {
     const old = cards.get(a.id);
     const card = el("div", "ap"); card.dataset.status = a.status; card.dataset.id = a.id;
-    const p = a.payload || {}, email = isEmail(a), key = (email ? "email_" : "event_") + a.status;
-    card.append(el("div", "ap-kind", email ? (a.kind === "email_reply" ? "Reply draft" : "Email draft") : "New event"));
+    const p = a.payload || {}, email = isEmail(a), pc = isPC(a);
+    const key = (email ? "email_" : pc ? "pc_" : "event_") + a.status;
+    card.append(el("div", "ap-kind", email ? (a.kind === "email_reply" ? "Reply draft" : "Email draft") : pc ? "On your PC" : "New event"));
     card.append(el("div", "ap-title", email ? `To ${p.to}` : a.title));
     if (email) card.append(el("div", "ap-meta", p.subject || "(no subject)"));
+    else if (pc) {
+      card.append(el("div", "ap-meta", a.summary || ""));
+      if (p.action === "type") { const t = el("textarea"); t.value = p.text || ""; t.readOnly = true; card.append(t); }
+      if (p.action === "read_file") card.append(el("div", "ap-meta", "She'll read it to answer you. The text goes to her AI, nowhere else."));
+    }
     else if (p.location || p.notes) card.append(el("div", "ap-meta", [p.location, p.notes].filter(Boolean).join(" · ")));
     let body = null;
     if (email) {
@@ -88,7 +98,7 @@
     }
     const row = el("div", "ap-row");
     if (a.status === "pending") {
-      const yes = el("button", "btn", email ? "Send from my mail" : "Add it");
+      const yes = el("button", "btn", email ? "Send from my mail" : pc ? "Do it" : "Add it");
       const no = el("button", "btn alt", "Not now");
       yes.onclick = async () => {
         yes.disabled = no.disabled = true;
@@ -113,7 +123,7 @@
         const again = el("button", "ap-link", "Open again"); again.onclick = () => openMail(p); row.append(again);
       }
     }
-    if (!email && a.status !== "executed" && a.status !== "rejected" && a.status !== "expired") {
+    if (!email && !pc && a.status !== "executed" && a.status !== "rejected" && a.status !== "expired") {
       const link = el("a", "ap-link", "Open in Google Calendar"); link.href = calendarUrl(p); link.target = "_blank"; link.rel = "noopener";
       row.append(link);
     }
