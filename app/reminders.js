@@ -124,6 +124,30 @@
     log.scrollTop = log.scrollHeight;
   }
 
+  /* ---------------- iPhone Reminders link ----------------
+     Open the app with #phone-reminders to make the private link the phone Shortcut uses.
+     Only its hash is kept in the brain; making a new one turns the old one off. */
+  const FEED = SUPABASE_URL + "/rest/v1/rpc/reminders_feed";
+  function phoneSetup() {
+    const card = el("div", "rm");
+    card.append(el("div", "rm-kind", "iPhone Reminders"),
+      el("div", "rm-meta", "Makes the private link your Shortcut uses. Making a new one turns off the old one."));
+    const row = el("div", "rm-row"), go = el("button", "btn", "Make my link");
+    row.append(go); card.append(row); log.appendChild(card); log.scrollTop = log.scrollHeight;
+    go.onclick = async () => {
+      go.disabled = true;
+      const { data, error } = await sb.rpc("make_reminders_token");
+      if (error) { alert("Couldn't make it: " + error.message); go.disabled = false; return; }
+      row.replaceChildren();
+      const parts = [["Token (paste into the Text step)", data], ["URL", FEED], ["apikey header", SUPABASE_KEY]];
+      for (const [label, val] of parts) {
+        const b = el("button", "btn alt", "Copy " + label.split(" ")[0]);
+        b.onclick = async () => { try { await navigator.clipboard.writeText(val); b.textContent = "Copied"; } catch { prompt(label, val); } };
+        card.insertBefore(el("div", "rm-meta", label), row); card.insertBefore(b, row);
+      }
+    };
+  }
+
   let started = false;
   sb.auth.onAuthStateChange((ev, session) => {
     if (!session || started || ev !== "SIGNED_IN" && ev !== "INITIAL_SESSION") return;
@@ -132,6 +156,7 @@
       btn.hidden = false; show();
       if (Notification.permission === "granted") subscribe(true).catch(() => {});  // keeps the phone's subscription fresh
     }
+    if (location.hash === "#phone-reminders") setTimeout(phoneSetup, 1500);  // after the chat history
     sb.channel("holiday-reminders")
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "commitments" }, p => update(p.new))
       .subscribe();
