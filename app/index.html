@@ -367,7 +367,7 @@ function listen(auto) {
 
 /* ---------------- chat ---------------- */
 const log = $("log"), input = $("input");
-let pendingId = null, pendingTimer = null;
+let pendingId = null, pendingTimer = null, pendingPoll = null;
 function autosize() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 120) + "px"; }
 input.addEventListener("input", autosize);
 input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
@@ -396,15 +396,33 @@ async function send(spoken = false) {
   const { data, error } = await sb.from("messages").insert({ channel: "dashboard", direction: "in", body }).select().single();
   if (error) { tmp.remove(); addMsg({ note: true, body: "That didn't send: " + error.message }); setFace("calm"); return; }
   seen.add(data.id); pendingId = data.id;
-  clearTimeout(pendingTimer);
-  pendingTimer = setTimeout(() => {
-    if (pendingId === data.id) { addMsg({ note: true, body: "I'm not hearing back from Holiday's PC. Is it on?" }); setFace("calm"); }
+  clearTimeout(pendingTimer); clearInterval(pendingPoll);
+  pendingPoll = setInterval(() => { if (pendingId === data.id) catchUp(); else clearInterval(pendingPoll); }, 6000);
+  pendingTimer = setTimeout(async () => {
+    if (pendingId !== data.id) return;
+    await catchUp();  // the reply may be there and the live feed just missed it
+    if (pendingId === data.id) { clearInterval(pendingPoll); addMsg({ note: true, body: "I'm not hearing back from Holiday's PC. Is it on?" }); setFace("calm"); }
   }, 150000);
 }
+/* The live feed drops while the phone sleeps or the app is in the background, and replies
+   that land meanwhile never arrive through it. So the table is checked directly: while a
+   reply is pending, when the app comes back to the front, and when the feed reconnects. */
+async function catchUp() {
+  try {
+    const { data } = await sb.from("messages").select("id,direction,body,related,created_at")
+      .eq("channel", "dashboard").order("created_at", { ascending: false }).limit(20);
+    (data || []).reverse().forEach(m => {
+      if (seen.has(m.id)) return;
+      if (m.direction === "out" && m.related && m.related.reply_to === pendingId) onReply(m); else addMsg(m);
+    });
+  } catch (e) { /* offline: the next check tries again */ }
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && !$("main").hidden) catchUp(); });
 const moodOf = m => (m.related && m.related.mood) || "smile";
 function onReply(m) {
+  if (m.id && seen.has(m.id)) return;  // already shown by catchUp
   addMsg(m);
-  if (m.related && m.related.reply_to === pendingId) { pendingId = null; clearTimeout(pendingTimer); }
+  if (m.related && m.related.reply_to === pendingId) { pendingId = null; clearTimeout(pendingTimer); clearInterval(pendingPoll); }
   if (voiceOn) sayRecorded("message_id", m.id, m.body, moodOf(m)); else { setFace("speaking", moodOf(m)); setFace("calm"); afterSpeech(); }
 }
 
@@ -462,7 +480,7 @@ function subscribe() {
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: "channel=eq.dashboard" },
         p => { if (p.new.direction === "out") onReply(p.new); })
     .on("postgres_changes", { event: "*", schema: "public", table: "briefs" }, loadBrief)
-    .subscribe();
+    .subscribe(status => { if (status === "SUBSCRIBED") catchUp(); });
 }
 
 /* ---------------- auth ---------------- */
