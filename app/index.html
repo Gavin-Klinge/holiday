@@ -435,13 +435,16 @@ async function loadHistory() {
 }
 let currentBriefId = null;
 async function loadBrief() {
-  const { data } = await sb.from("briefs").select("id,brief_date,content_md").eq("kind", "morning")
-    .order("brief_date", { ascending: false }).limit(1).maybeSingle();
+  /* The newest one, morning brief or evening wrap. */
+  const { data } = await sb.from("briefs").select("id,brief_date,kind,content_md").in("kind", ["morning", "evening"])
+    .order("brief_date", { ascending: false }).order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (!data) return;
   $("brief").hidden = false;
   const d = new Date(data.brief_date + "T12:00:00");
   const today = new Date(); const isToday = d.toDateString() === today.toDateString();
-  $("briefTitle").textContent = isToday ? "This morning's brief" : "Brief from " + d.toLocaleDateString(undefined, { weekday: "long" });
+  const evening = data.kind === "evening";
+  $("briefTitle").textContent = isToday ? (evening ? "Tonight's wrap" : "This morning's brief")
+    : (evening ? "Wrap from " : "Brief from ") + d.toLocaleDateString(undefined, { weekday: "long" });
   $("briefText").textContent = data.content_md; currentBriefId = data.id;
   loadBriefVideo(data.id);
 }
