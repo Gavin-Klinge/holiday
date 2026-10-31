@@ -1,5 +1,5 @@
 // Network first so updates show up right away; the cached copy only covers being offline.
-const CACHE = "holiday-v2";
+const CACHE = "holiday-v3";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-180.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(self.clients.claim()); });
