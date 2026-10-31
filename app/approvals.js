@@ -103,6 +103,12 @@
   function render(a) {
     const old = cards.get(a.id);
     latest.set(a.id, a);
+    if (window.HolidayChecklist && HolidayChecklist.owns(a)) {  // checklist.js: one OK, many reminders
+      const card = HolidayChecklist.render(a, update);
+      if (old) old.replaceWith(card);
+      cards.set(a.id, card);
+      return card;
+    }
     const card = el("div", "ap"); card.dataset.status = a.status; card.dataset.id = a.id;
     const p = a.payload || {}, email = isEmail(a), pc = isPC(a), send = email && p.send, move = p.action === "move";
     const key = (send && a.status in { approved: 1, executed: 1 } ? "send_" : move && a.status in { approved: 1, executed: 1 } ? "move_"
