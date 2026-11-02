@@ -122,6 +122,7 @@ header h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: .1px; 
   padding: 3px 10px; border-radius: 999px; background: var(--surface-2); margin: 6px 0 2px; }
 @media (prefers-reduced-motion: reduce) { .msg { animation: none; } }
 .msg.h { cursor: pointer; }
+.msg .edited { display: block; margin-top: 4px; font-size: 11px; color: var(--muted); letter-spacing: .02em; }
 
 .composer { display: flex; gap: 8px; align-items: flex-end; margin: 0 -6px; padding: 6px 6px calc(8px + env(safe-area-inset-bottom)); }
 .composer textarea { flex: 1; resize: none; border: 1px solid var(--ring); background: var(--surface);
@@ -426,13 +427,31 @@ function addMsg(m, { scroll = true } = {}) {
   }
   const el = document.createElement("div");
   el.className = "msg " + (m.note ? "note" : m.direction === "in" ? "g" : "h");
-  el.textContent = m.body;
-  if (m.direction === "out") el.onclick = () => sayRecorded("message_id", m.id, m.body, moodOf(m));
+  if (m.id) el.dataset.id = m.id;
+  showBody(el, m);
+  if (m.direction === "out") el.onclick = () => {
+    const cur = el._msg || m;  // she may have edited it since; her recorded voice is the old text
+    if (cur.related && cur.related.edited_at) speak(cur.body, moodOf(cur)); else sayRecorded("message_id", cur.id, cur.body, moodOf(cur));
+  };
   log.appendChild(el);
   if (window.HolidayApprovals) HolidayApprovals.attach(el, m);  // draft cards (approvals.js)
   if (window.HolidayReminders) HolidayReminders.attach(el, m);  // reminder cards (reminders.js)
   if (scroll) log.scrollTop = log.scrollHeight;
   return el;
+}
+/* Holiday can fix a message she already sent ("take class coverage off that list").
+   The text is swapped in place with a small "edited" mark. */
+function showBody(el, m) {
+  el._msg = m; el.textContent = m.body;
+  if (m.related && m.related.edited_at) {
+    const tag = document.createElement("span"); tag.className = "edited"; tag.textContent = "edited";
+    el.appendChild(tag);
+  }
+}
+function onEdit(m) {
+  if (!m || !m.id) return;
+  const el = log.querySelector('.msg[data-id="' + m.id + '"]');
+  if (el && el._msg && el._msg.body !== m.body) showBody(el, m);
 }
 async function send(spoken = false) {
   const body = input.value.trim(); if (!body) return;
@@ -460,7 +479,7 @@ async function catchUp() {
     const { data } = await sb.from("messages").select("id,direction,body,related,created_at")
       .eq("channel", "dashboard").order("created_at", { ascending: false }).limit(20);
     (data || []).reverse().forEach(m => {
-      if (seen.has(m.id)) return;
+      if (seen.has(m.id)) { onEdit(m); return; }
       if (m.direction === "out" && m.related && m.related.reply_to === pendingId) onReply(m); else addMsg(m);
     });
   } catch (e) { /* offline: the next check tries again */ }
@@ -531,6 +550,8 @@ function subscribe() {
   sb.channel("holiday-live")
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: "channel=eq.dashboard" },
         p => { if (p.new.direction === "out") onReply(p.new); })
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages", filter: "channel=eq.dashboard" },
+        p => { if (p.new.direction === "out") onEdit(p.new); })
     .on("postgres_changes", { event: "*", schema: "public", table: "briefs" }, loadBrief)
     .subscribe(status => { if (status === "SUBSCRIBED") catchUp(); });
 }
