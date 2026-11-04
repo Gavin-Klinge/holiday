@@ -118,7 +118,8 @@
     if (move) card.append(el("div", "ap-meta", a.summary || ""));
     if (email) card.append(el("div", "ap-meta", p.subject || "(no subject)"));
     else if (pc) {
-      card.append(el("div", "ap-meta", a.summary || ""));
+      const steps = el("div", "ap-meta", a.summary || ""); steps.style.whiteSpace = "pre-line";  // a plan lists one step per line
+      card.append(steps);
       if (p.action === "type") { const t = el("textarea"); t.value = p.text || ""; t.readOnly = true; card.append(t); }
       if (p.action === "read_file") card.append(el("div", "ap-meta", "She'll read it to answer you. The text goes to her AI, nowhere else."));
     }
