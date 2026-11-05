@@ -175,11 +175,10 @@ header h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: .1px; 
 
   <section class="signin" id="signin" hidden>
     <p>Sign in to talk to Holiday.</p>
-    <input id="email" type="email" autocomplete="username" placeholder="Email" value="gavinklinge@gmail.com">
+    <input id="email" type="email" autocomplete="username" placeholder="Email">
     <input id="password" type="password" autocomplete="current-password" placeholder="Password">
     <div class="row">
       <button class="btn" id="signinBtn">Sign in</button>
-      <button class="btn alt" id="signupBtn">First time</button>
     </div>
     <div class="err" id="authErr"></div>
   </section>
@@ -560,10 +559,12 @@ function subscribe() {
 async function enter(session) {
   $("signin").hidden = !!session; $("main").hidden = !session; $("signOut").hidden = !session;
   if (!session) return;
-  const { data: owner } = await sb.rpc("is_owner");
+  const { data: owner, error: ownerErr } = await sb.rpc("is_owner");
   if (!owner) {
     $("main").hidden = true; $("signin").hidden = false;
-    $("authErr").textContent = "You're signed in. Holiday is waiting for Claude to make this account hers to answer.";
+    if (ownerErr) { $("authErr").textContent = "Couldn't check your account. Try again in a moment."; return; }
+    await sb.auth.signOut();
+    $("authErr").textContent = "This account can't use Holiday.";
     return;
   }
   await Promise.all([loadHistory(), loadBrief(), loadFaces()]);
@@ -572,15 +573,8 @@ async function enter(session) {
 $("signinBtn").onclick = async () => {
   $("authErr").textContent = "";
   const { data, error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
-  if (error) { $("authErr").textContent = /confirm/i.test(error.message) ? "Account made. Tell Claude in the thread and I'll switch it on." : error.message; return; }
+  if (error) { $("authErr").textContent = error.message; return; }
   enter(data.session);
-};
-$("signupBtn").onclick = async () => {
-  $("authErr").textContent = "";
-  const pw = $("password").value;
-  if (pw.length < 10) { $("authErr").textContent = "Pick a password with at least 10 characters."; return; }
-  const { error } = await sb.auth.signUp({ email: $("email").value.trim(), password: pw });
-  $("authErr").textContent = error ? error.message : "Account made. Tell Claude in the thread and I'll switch it on, then sign in.";
 };
 $("signOut").onclick = async () => { await sb.auth.signOut(); location.reload(); };
 sb.auth.getSession().then(({ data }) => enter(data.session));

@@ -7,18 +7,51 @@
 <style>
   body { font-family: system-ui, sans-serif; max-width: 640px; margin: 48px auto; padding: 0 16px; line-height: 1.6; color: #222; background: #fff; }
   a { color: #2a6db0; }
+  h2 { margin-top: 2em; }
+  li { margin: .35em 0; }
 </style>
 </head>
 <body>
 <h1>Privacy policy</h1>
-<p>Last updated: 19 October 2026</p>
-<p>Holiday is a private personal assistant used only by one household. It is not offered to the public.</p>
-<h2>What data Holiday accesses</h2>
-<p>With the account owner's permission, Holiday may read Google account data such as calendar events and email, only to help that household organise its own work and family life.</p>
-<h2>How data is stored</h2>
-<p>Data Holiday accesses is processed and stored on the household's own computer. It is not sold, shared with third parties, or used for advertising.</p>
-<h2>Removing access</h2>
-<p>Access can be revoked at any time at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>. Locally stored data can be deleted by the owner at any time.</p>
+<p>Last updated: 5 November 2026</p>
+<p>Holiday is a private personal assistant used by one household. It is not offered to the public, and only the household's owner account can use it.</p>
+<p>Holiday runs from a computer in the home, but it is not fully local. To store messages and to write, speak and send pings, it uses the online services listed below. This page says plainly what goes where.</p>
+
+<h2>What data Holiday reads</h2>
+<p>With the account owner's permission, Holiday reads Google account data: email and calendar events, plus a read-only family calendar. It uses this only to help the household with its own work and family life, for example a morning summary, reminders, and drafts of replies or calendar events.</p>
+<p>Holiday only sends an email or adds a calendar event after the owner approves that specific item in the app.</p>
+
+<h2>Where data is stored</h2>
+<ul>
+  <li><b>Supabase</b> (a hosted database) stores the chat history, morning briefs and their videos, reminders, lists, drafts waiting for approval, notes Holiday keeps about the household, and health checks on Holiday itself. Access is limited to the owner's account.</li>
+  <li><b>The home computer</b> holds the Google sign-in, the keys for the services below, Holiday's program code, and her voice and face files.</li>
+  <li><b>GitHub</b> hosts this website and the phone app's page. Holiday's program code is also backed up to a private GitHub repository.</li>
+</ul>
+
+<h2>Online services that process data</h2>
+<p>Each service gets only what it needs for its job, and each one's own privacy terms apply.</p>
+<ul>
+  <li><b>Anthropic (Claude) and OpenAI (Codex)</b>, through the owner's own subscriptions, write Holiday's replies, briefs and drafts. To do that they receive the message plus the relevant context, which can include email and calendar details and household notes.</li>
+  <li><b>ElevenLabs</b> turns the text of Holiday's replies and briefs into her voice.</li>
+  <li><b>Apple</b> delivers phone notifications (web push). If the household turns on <b>ntfy.sh</b> pings, those go through ntfy.sh as well. A notification can contain a short line of text, such as a reminder.</li>
+  <li><b>Web lookups:</b> when Holiday searches the web, names, contact details, addresses and dates are stripped from the search words first. This filter is careful but not perfect.</li>
+  <li><b>Siri:</b> if the owner talks to Holiday through a Siri Shortcut, Apple handles the speech before the message reaches Holiday.</li>
+</ul>
+
+<h2>What stays on the home computer</h2>
+<ul>
+  <li>The desktop version of Holiday can run fully offline: listening, a local language model, and a local voice.</li>
+  <li>If the online writing services are unavailable, a local model on the computer can answer instead.</li>
+  <li>Making Holiday's face videos and training her local voice happen on the computer.</li>
+  <li>Sign-in tokens and service keys are never put on this website or in the public code.</li>
+</ul>
+
+<h2>What Holiday does not do</h2>
+<p>Holiday's data is not sold, not used for advertising, and not shared with anyone outside the services above. Google data is used only to provide Holiday's features to the household.</p>
+
+<h2>Keeping and removing data</h2>
+<p>There is no automatic expiry yet: messages and notes stay until the owner removes them. The owner can see, correct or delete what Holiday knows about the household from the "What she knows" screen in the app, and can delete any stored data directly in the database at any time.</p>
+<p>Google access can be revoked at any time at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</p>
 <p><a href="index.html">Home</a></p>
 </body>
 </html>
