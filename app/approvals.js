@@ -24,6 +24,7 @@
   .ap-link { color: var(--muted); font-size: 14px; background: none; border: 0; padding: 4px 2px; cursor: pointer; text-decoration: underline; }
   .ap-state { font-size: 14px; color: var(--muted); }
   .ap[data-status="executed"] .ap-state { color: var(--accent); font-weight: 600; }
+  .ap[data-status="effect_unknown"] .ap-state, .ap[data-status="failed"] .ap-state { color: var(--text, inherit); font-weight: 600; }
   .ap[data-status="rejected"], .ap[data-status="expired"] { opacity: .6; }`;
   const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 
@@ -41,7 +42,17 @@
     email_cancelled: "Undone. Nothing went out.", event_cancelled: "Undone. Nothing changed.",
     pc_pending: "", pc_approved: "Doing it on your PC…", pc_executed: "Done on your PC.",
     pc_rejected: "Skipped.", pc_expired: "Expired.",
+    executing: "Doing it now…",
+    failed: "That didn't go through. Nothing changed.",
+    effect_unknown: "Not sure it went through. Please check before trying again.",
   };
+  // Run-once states (holiday_once.py). Before the 0014 SQL is pasted the row stays 'approved'
+  // and the claim lives in result: claim = doing it, done / failed / unknown = how it ended.
+  function shownStatus(a) {
+    const r = a.result || {};
+    if (a.status !== "approved" || !r.claim) return a.status;
+    return r.unknown ? "effect_unknown" : r.failed ? "failed" : r.done ? "executed" : "executing";
+  }
   const isEmail = a => a.kind === "email_new" || a.kind === "email_reply";
   const isPC = a => a.kind === "pc_action";
 
@@ -103,6 +114,8 @@
   function render(a) {
     const old = cards.get(a.id);
     latest.set(a.id, a);
+    const realStatus = a.status;
+    a = Object.assign({}, a, { status: shownStatus(a) });
     if (window.HolidayChecklist && HolidayChecklist.owns(a)) {  // checklist.js: one OK, many reminders
       const card = HolidayChecklist.render(a, update);
       if (old) old.replaceWith(card);
@@ -113,6 +126,7 @@
     const p = a.payload || {}, email = isEmail(a), pc = isPC(a), send = email && p.send, move = p.action === "move";
     const key = (send && a.status in { approved: 1, executed: 1 } ? "send_" : move && a.status in { approved: 1, executed: 1 } ? "move_"
       : email ? "email_" : pc ? "pc_" : "event_") + a.status;
+    const runState = { executing: 1, failed: 1, effect_unknown: 1 }[a.status] ? a.status : null;
     card.append(el("div", "ap-kind", email ? (a.kind === "email_reply" ? "Reply draft" : "Email draft") : pc ? "On your PC" : move ? "Move event" : "New event"));
     card.append(el("div", "ap-title", email ? `To ${p.to}` : a.title));
     if (move) card.append(el("div", "ap-meta", a.summary || ""));
@@ -167,13 +181,21 @@
       setTimeout(() => { const cur = latest.get(a.id); if (cur && cur.status === "approved") update(cur); }, 1000);
     } else {
       const r = a.result || {};
-      row.append(el("span", "ap-state", r.undone ? (move ? "Undone. It's back where it was." : "Undone. Taken off your calendar.") : STATE[key] || a.status));
+      row.append(el("span", "ap-state", r.undone ? (move ? "Undone. It's back where it was." : "Undone. Taken off your calendar.")
+        : STATE[key] || STATE[runState] || a.status));
+      if (realStatus === "effect_unknown") {  // he checked: tell her how it ended
+        const yes = el("button", "ap-link", "It went through"), no = el("button", "ap-link", "It didn't");
+        yes.onclick = async () => { yes.disabled = no.disabled = true; const x = await setStatus(a, "executed"); if (x) update(x); };
+        no.onclick = async () => { yes.disabled = no.disabled = true; const x = await setStatus(a, "failed"); if (x) update(x); };
+        row.append(yes, no);
+      }
       if (email && !send && a.status === "executed") {
         const again = el("button", "ap-link", "Open again"); again.onclick = () => openMail(p); row.append(again);
       }
       if (canUndoAfter(a)) { const u = el("button", "ap-link", "Undo"); u.onclick = () => undoAfter(a, u); row.append(u); }
     }
-    if (!email && !pc && !move && a.status !== "executed" && a.status !== "rejected" && a.status !== "expired" && a.status !== "cancelled") {
+    if (!email && !pc && !move && a.status !== "executed" && a.status !== "rejected" && a.status !== "expired" && a.status !== "cancelled"
+        && a.status !== "executing" && a.status !== "effect_unknown") {
       const link = el("a", "ap-link", "Open in Google Calendar"); link.href = calendarUrl(p); link.target = "_blank"; link.rel = "noopener";
       row.append(link);
     }
